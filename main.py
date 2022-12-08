@@ -60,6 +60,9 @@ def encode(input_file, output_file):
     make_codes(verticles_list[0],"")
     in_f = open(input_file, 'r')
     out_f = open(output_file, 'w')
+    out_f.writelines(str(len(codes_dict))+"\n")
+    for i in codes_dict.keys():
+        out_f.writelines(codes_dict[i]+" "+i+"\n")
     for line in in_f.readlines():
         for i in line:
             out_f.write(codes_dict[i])
@@ -67,7 +70,23 @@ def encode(input_file, output_file):
     out_f.close()
 # --encode input.txt output.txt
 def decode(input_file, output_file):
-    pass
+    in_f = open(input_file, 'r')
+    out_f = open(output_file, 'w')
+    decode_dict = {}
+    s1 = ""
+    n = int(in_f.readline())
+    for i in range(n):
+        s = in_f.readline().split()
+        decode_dict.update({s[0]:s[1]})
+    for line in in_f.readlines():
+        for i in line:
+            s1 += i
+            if s1 in decode_dict.keys():
+                out_f.write(decode_dict[s1])
+                print(s1)
+                s1 = ""
+    in_f.close()
+    out_f.close()
 
 
 codes_dict = {}
