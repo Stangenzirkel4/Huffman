@@ -15,7 +15,11 @@ class Verticle():
         else:
             self.name = self.left_child.name + self.right_child.name
 
-
+def write_bytes(current_byte,out_f):
+    while len(current_byte)>8:
+        out_f.write(int(current_byte[0:8],2).to_bytes(1,"big"))
+        current_byte = current_byte[8:]
+    return current_byte
 def count_symbol_freq(input_file):
     symbol_freq = dict()
     with open(input_file, 'r') as f:
@@ -30,6 +34,8 @@ def count_symbol_freq(input_file):
 
 def make_codes(root, s):
     if (root.left_child == None) and (root.right_child == None):
+        #bin_s = int(s,2).to_bytes(1,byteorder="big")
+        #print(root.name,s)
         codes_dict.update({root.name:s})
     else:
         make_codes(root.left_child, s + "0")
@@ -57,34 +63,60 @@ def make_graph(dict):
 def encode(input_file, output_file):
     dict = count_symbol_freq(input_file)
     verticles_list = make_graph(dict)
-    make_codes(verticles_list[0],"")
+    make_codes(verticles_list[0], "")
     in_f = open(input_file, 'r')
-    out_f = open(output_file, 'w')
-    out_f.writelines(str(len(codes_dict))+"\n")
+    out_f = open(output_file, 'wb')
+    current_line = str(len(codes_dict))+"\n"
+    out_f.write(current_line.encode("UTF-8"))
     for i in codes_dict.keys():
-        out_f.writelines(codes_dict[i]+" "+i+"\n")
+        out_f.write(i.encode("UTF-8"))
+        out_f.write(" ".encode("UTF-8"))
+        out_f.write(codes_dict[i].encode("UTF-8"))
+        out_f.write("\n".encode("UTF-8"))
+        #print(codes_dict[i])
+    current_byte = ""
     for line in in_f.readlines():
         for i in line:
-            out_f.write(codes_dict[i])
+            current_byte += codes_dict[i]
+            current_byte = write_bytes(current_byte,out_f)
+    out_f.write(int(current_byte,2).to_bytes(1,"big"))
     in_f.close()
     out_f.close()
+
 # --encode input.txt output.txt
+# --decode output.txt input1.txt
 def decode(input_file, output_file):
-    in_f = open(input_file, 'r')
+    in_f = open(input_file, 'rb')
     out_f = open(output_file, 'w')
     decode_dict = {}
     s1 = ""
+    s2 = ""
     n = int(in_f.readline())
     for i in range(n):
-        s = in_f.readline().split()
-        decode_dict.update({s[0]:s[1]})
+        s = in_f.readline()
+        print(s)
+        if s == b'\n':
+            #print("!!!")
+            s = in_f.readline()
+            key = str(s[1:-1])[2:-1]
+            char = "\n"
+            decode_dict.update({str(key): char})
+            continue
+        key = str(s[2:-1])[2:-1]
+        char = chr(s[0])
+        decode_dict.update({str(key): char})
     for line in in_f.readlines():
         for i in line:
-            s1 += i
-            if s1 in decode_dict.keys():
-                out_f.write(decode_dict[s1])
-                print(s1)
-                s1 = ""
+            s1 += "0"*(10 - len(str(bin(i)))) + str(bin(i))[2:]
+            #print(str(bin(i)))
+    #print(s1)
+    #print(decode_dict)
+    for i in s1:
+        s2 += i
+        if s2 in decode_dict.keys():
+            out_f.write(decode_dict[s2])
+            s2 = ""
+
     in_f.close()
     out_f.close()
 
@@ -97,7 +129,7 @@ else:
     input_file = sys.argv[2]
     output_file = sys.argv[3]
     if operation == '--encode':
-        print(encode(input_file, output_file))
+        encode(input_file, output_file)
     elif operation == '--decode':
         decode(input_file, output_file)
     else:
