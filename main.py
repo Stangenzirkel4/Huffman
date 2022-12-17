@@ -71,8 +71,10 @@ def encode(input_file, output_file):
     out_f.write(current_line.encode("UTF-8"))   # Записываем в файл
 
     for i in dict.keys():                             # Записываем словарь шифров в виде "<символ> <код>"
-        current_line = i + " " + dict[i] + "\n"
+        current_line = i + " "
         out_f.write(current_line.encode("UTF-8"))
+        out_f.write(int(dict[i]).to_bytes(2,"big"))
+        out_f.write("\n".encode(("UTF-8")))
 
     current_byte = ""   # Строка для побайтовой записи (содержит только "0" и "1", которые переводятся в int, а затем в byte)
     for line in in_f.readlines():
@@ -102,12 +104,12 @@ def decode(input_file, output_file):
         current_line = in_f.readline()
         if current_line == b'\n':  # Проверяем, не является ли она переносом строки
             current_line = in_f.readline()
-            #print(current_line)# Если да, считываем строку линию и обновляем словарь
-            key = int(str(current_line[1:-1])[2:-1])  # При записи отбрасываем служебные символы
+            print(current_line)# Если да, считываем строку линию и обновляем словарь
+            key = int.from_bytes(current_line[1:3],"big")  # При записи отбрасываем служебные символы
             char = "\n"  # Необработанная строка имеет вид " b'0101'\n"
             decode_dict.update({char: key})
             continue
-        key = int(str(current_line[2:-1])[2:-1])  # Если нет, то отбрасываем служебные символы по-другому
+        key = int.from_bytes(current_line[2:4],"big")  # Если нет, то отбрасываем служебные символы по-другому
         char = chr(current_line[0])  # Необработанная строка имеет вид "A b'0101'\n"
         decode_dict.update({char: key})
     print(decode_dict)
