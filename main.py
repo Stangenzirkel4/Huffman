@@ -60,20 +60,20 @@ def make_graph(dict):
 
 
 def encode(input_file, output_file):
-    dict = count_symbol_freq(input_file)    # Считаем кол-во уникальных символов
-    verticles_list = make_graph(dict)       # Создаем граф, ищем корень
+    freq_dict = count_symbol_freq(input_file)    # Считаем кол-во уникальных символов
+    verticles_list = make_graph(freq_dict)       # Создаем граф, ищем корень
     make_codes(verticles_list[0], "")       # Формируем словарь шифров
 
     in_f = open(input_file, 'r')            # Открываем файл на чтение
     out_f = open(output_file, 'wb')         # Открываем файл на запись в байтовом режиме
 
-    current_line = str(len(codes_dict))+"\n"    # Формируем первую строку (танцы с бубном нужны, т.к. запись в байтовом режиме)
+    current_line = str(len(codes_dict))+"\n"    # Формируем первую строку
     out_f.write(current_line.encode("UTF-8"))   # Записываем в файл
 
-    for i in dict.keys():                             # Записываем словарь шифров в виде "<символ> <код>"
-        current_line = i + " "
+    for i in freq_dict.keys():                              # Записываем словарь количества вхождений в виде "<символ> <количство>"
+        current_line = i + " "                              # Запись в байтовом виде
         out_f.write(current_line.encode("UTF-8"))
-        out_f.write(int(dict[i]).to_bytes(2,"big"))
+        out_f.write(int(freq_dict[i]).to_bytes(2,"big"))
         out_f.write("\n".encode(("UTF-8")))
 
     current_byte = ""   # Строка для побайтовой записи (содержит только "0" и "1", которые переводятся в int, а затем в byte)
@@ -95,27 +95,27 @@ def decode(input_file, output_file):
     in_f = open(input_file, 'rb')       # Открываем файл на чтение в байтовом режиме
     out_f = open(output_file, 'w')      # Открываем файл на запись
 
-    decode_dict = {}        # Словарь для дешифрации вида "Шифр: Символ"
+    freq_dict = {}        # Словарь количества значений
     current_byte = ""       # Строка из "0" и "1" для поиска в ней шифров
     current_code = ""       # Строка для обхода файла и проверки на соответствие с ключами словаря дешифрации
 
     n = int(in_f.readline())    # Считываем первый символ, отвечающий за размер словаря дешифрации
     for i in range(n):
-        current_line = in_f.readline()
-        if current_line == b'\n':  # Проверяем, не является ли она переносом строки
+        current_line = in_f.readline()          # Считываем очередную строку
+        if current_line == b'\n':               # Проверяем, не является ли она переносом строки
             current_line = in_f.readline()
-            print(current_line)# Если да, считываем строку линию и обновляем словарь
-            key = int.from_bytes(current_line[1:3],"big")  # При записи отбрасываем служебные символы
-            char = "\n"  # Необработанная строка имеет вид " b'0101'\n"
-            decode_dict.update({char: key})
+            print(current_line)                 # Если да, считываем следующую строку и обновляем словарь
+            key = int.from_bytes(current_line[1:3], "big")  # При записи отбрасываем служебные символы
+            char = "\n"
+            freq_dict.update({char: key})       # Обновляем словарь количества вхождений
             continue
-        key = int.from_bytes(current_line[2:4],"big")  # Если нет, то отбрасываем служебные символы по-другому
-        char = chr(current_line[0])  # Необработанная строка имеет вид "A b'0101'\n"
-        decode_dict.update({char: key})
-    print(decode_dict)
-    verticles_list = make_graph(decode_dict)
-    make_codes(verticles_list[0],"")
-    print(codes_dict)
+        key = int.from_bytes(current_line[2:4], "big")   # Если нет, то отбрасываем служебные символы по-другому
+        char = chr(current_line[0])
+        freq_dict.update({char: key})           # Обновляем словарь количества вхождений
+    #print(freq_dict)
+    verticles_list = make_graph(freq_dict)      # Формируем граф для получения кодов Хаффмана исходя из количества вхождений символов
+    make_codes(verticles_list[0],"")            # Получаем коды обходом графа, начиная от корня
+    #print(codes_dict)
 
     for line in in_f.readlines():       # Переводим каждый байт входного файла в строку
         for i in line:
@@ -125,9 +125,9 @@ def decode(input_file, output_file):
     extra_bits = int(current_byte[-8:], 2)  # Проверяем последний байт, в котором содержится кол-во "лишних" бит
     current_byte = current_byte[:-(8+extra_bits)]   # Удаляем бит с количеством и "лишние" биты
     codes_dict_new = {}
-    for i in codes_dict.keys():
+    for i in codes_dict.keys():                     # Меняем местами ключ и значения словаря с кодами
         codes_dict_new.update({codes_dict[i]:i})
-    print(codes_dict_new)
+    
     for i in current_byte:
         current_code += i               # Наращиваем current_code пока не станет соответствовать одному из шифров
         if current_code in codes_dict_new.keys():  # Когда соответствует - дешифруем
