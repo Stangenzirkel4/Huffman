@@ -70,8 +70,8 @@ def encode(input_file, output_file):
     current_line = str(len(codes_dict))+"\n"    # Формируем первую строку (танцы с бубном нужны, т.к. запись в байтовом режиме)
     out_f.write(current_line.encode("UTF-8"))   # Записываем в файл
 
-    for i in codes_dict.keys():                             # Записываем словарь шифров в виде "<символ> <код>"
-        current_line = i + " " + codes_dict[i] + "\n"
+    for i in dict.keys():                             # Записываем словарь шифров в виде "<символ> <код>"
+        current_line = i + " " + dict[i] + "\n"
         out_f.write(current_line.encode("UTF-8"))
 
     current_byte = ""   # Строка для побайтовой записи (содержит только "0" и "1", которые переводятся в int, а затем в byte)
@@ -98,29 +98,38 @@ def decode(input_file, output_file):
     current_code = ""       # Строка для обхода файла и проверки на соответствие с ключами словаря дешифрации
 
     n = int(in_f.readline())    # Считываем первый символ, отвечающий за размер словаря дешифрации
-    for i in range(n):          # Формируем словарь дешифрации
-        current_line = in_f.readline()          # Считываем очередную строку
-        if current_line == b'\n':               # Проверяем, не является ли она переносом строки
-            current_line = in_f.readline()      # Если да, считываем строку линию и обновляем словарь
-            key = str(current_line[1:-1])[2:-1] # При записи отбрасываем служебные символы
-            char = "\n"                         # Необработанная строка имеет вид " b'0101'\n"
-            decode_dict.update({key: char})
+    for i in range(n):
+        current_line = in_f.readline()
+        if current_line == b'\n':  # Проверяем, не является ли она переносом строки
+            current_line = in_f.readline()
+            #print(current_line)# Если да, считываем строку линию и обновляем словарь
+            key = int(str(current_line[1:-1])[2:-1])  # При записи отбрасываем служебные символы
+            char = "\n"  # Необработанная строка имеет вид " b'0101'\n"
+            decode_dict.update({char: key})
             continue
-        key = str(current_line[2:-1])[2:-1]     # Если нет, то отбрасываем служебные символы по-другому
-        char = chr(current_line[0])             # Необработанная строка имеет вид "A b'0101'\n"
-        decode_dict.update({str(key): char})
+        key = int(str(current_line[2:-1])[2:-1])  # Если нет, то отбрасываем служебные символы по-другому
+        char = chr(current_line[0])  # Необработанная строка имеет вид "A b'0101'\n"
+        decode_dict.update({char: key})
+    print(decode_dict)
+    verticles_list = make_graph(decode_dict)
+    make_codes(verticles_list[0],"")
+    print(codes_dict)
 
     for line in in_f.readlines():       # Переводим каждый байт входного файла в строку
         for i in line:
+            #print(bin(i))
             current_byte += "0"*(10 - len(str(bin(i)))) + str(bin(i))[2:]  #Если необходимо дописываем ведущие нули, т.к. int() их затирает
 
     extra_bits = int(current_byte[-8:], 2)  # Проверяем последний байт, в котором содержится кол-во "лишних" бит
     current_byte = current_byte[:-(8+extra_bits)]   # Удаляем бит с количеством и "лишние" биты
-
+    codes_dict_new = {}
+    for i in codes_dict.keys():
+        codes_dict_new.update({codes_dict[i]:i})
+    print(codes_dict_new)
     for i in current_byte:
         current_code += i               # Наращиваем current_code пока не станет соответствовать одному из шифров
-        if current_code in decode_dict.keys():  # Когда соответствует - дешифруем
-            out_f.write(decode_dict[current_code])
+        if current_code in codes_dict_new.keys():  # Когда соответствует - дешифруем
+            out_f.write(codes_dict_new[current_code])
             current_code = ""                   # Сам current_code обнуляем
 
     in_f.close()            # Не забываем закрыть файлы
